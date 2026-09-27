@@ -1,0 +1,21 @@
+select
+    order_id,
+    customer_unique_id,
+    customer_city,
+    customer_state,
+    order_status,
+    order_purchase_timestamp,
+    date_trunc('month', order_purchase_timestamp) as order_month,
+    item_count,
+    distinct_product_count,
+    seller_count,
+    total_item_value,
+    total_freight_value,
+    total_order_value,
+    total_payment_value,
+    max_payment_installments,
+    avg_review_score,
+    delivery_days,
+    days_vs_estimate,
+    delivered_on_time
+from {{ ref('int_orders_enriched') }}
