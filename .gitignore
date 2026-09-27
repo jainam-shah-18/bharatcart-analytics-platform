@@ -1,24 +1,18 @@
-# Python
+@"
 .venv/
 __pycache__/
 *.pyc
-
-# Credentials
 .env
 
-# Raw datasets
 data/raw/*
 !data/raw/.gitkeep
 
-# Airflow
 logs/
-
-# dbt generated files
 dbt_bharatcart/target/
 dbt_bharatcart/logs/
 dbt_bharatcart/dbt_packages/
 
-# Windows and VS Code
+.vscode/
 Thumbs.db
 .DS_Store
-.vscode/
+"@ | Set-Content .gitignore
