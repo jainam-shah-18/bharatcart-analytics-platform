@@ -1,40 +1,61 @@
-from pathlib import Path
+import logging
 import os
+from pathlib import Path
 
 import boto3
 from dotenv import load_dotenv
 
 load_dotenv()
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "raw"
-BUCKET = os.getenv("S3_BUCKET_NAME")
-REGION = os.getenv("AWS_DEFAULT_REGION")
+DATA_DIR = Path("data/raw")
+BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+S3_PREFIX = os.getenv("S3_PREFIX", "raw")
 
-required_variables = [
-    "AWS_ACCESS_KEY_ID",
-    "AWS_SECRET_ACCESS_KEY",
-    "AWS_DEFAULT_REGION",
-    "S3_BUCKET_NAME",
-]
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+)
 
-missing = [name for name in required_variables if not os.getenv(name)]
 
-if missing:
-    raise ValueError(f"Missing environment variables: {missing}")
+def validate_configuration():
+    if not BUCKET_NAME:
+        raise ValueError("S3_BUCKET_NAME is missing from .env")
 
-s3 = boto3.client("s3", region_name=REGION)
-s3.head_bucket(Bucket=BUCKET)
 
-csv_files = sorted(DATA_DIR.glob("*.csv"))
+def find_csv_files():
+    files = list(DATA_DIR.glob("*.csv"))
 
-if not csv_files:
-    raise FileNotFoundError(f"No CSV files found in {DATA_DIR}")
+    if not files:
+        raise FileNotFoundError(f"No CSV files found in {DATA_DIR.resolve()}")
 
-for file_path in csv_files:
-    object_key = f"raw/{file_path.name}"
+    return files
 
-    print(f"Uploading {file_path.name}...")
-    s3.upload_file(str(file_path), BUCKET, object_key)
-    print(f"Uploaded: s3://{BUCKET}/{object_key}")
 
-print(f"\nSuccessfully uploaded {len(csv_files)} files.")
+def upload_files(files):
+    s3 = boto3.client("s3")
+
+    for file_path in files:
+        if file_path.stat().st_size == 0:
+            raise ValueError(f"Empty file detected: {file_path.name}")
+
+        object_key = f"{S3_PREFIX}/{file_path.name}"
+
+        logging.info("Uploading %s to s3://%s/%s", file_path, BUCKET_NAME, object_key)
+
+        s3.upload_file(
+            str(file_path),
+            BUCKET_NAME,
+            object_key,
+        )
+
+    logging.info("Uploaded %d CSV files successfully", len(files))
+
+
+def main():
+    validate_configuration()
+    files = find_csv_files()
+    upload_files(files)
+
+
+if __name__ == "__main__":
+    main()
